@@ -86,6 +86,6 @@ When you press Play in Studio, the server runs every test in `ServerScriptServic
 - The worlds are built under `Workspace.Worlds` when the game runs, not saved into the place. To change them, edit `World/WorldBuilder.luau`.
 - Back up a place before connecting Rojo to it for the first time (**File → Save to File As…**).
 
-## Collaborating
+## Saving your work to GitHub
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

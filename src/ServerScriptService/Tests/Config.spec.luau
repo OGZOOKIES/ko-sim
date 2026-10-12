@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local BagsConfig = require(Config.BagsConfig)
 local EggsConfig = require(Config.EggsConfig)
+local GloveDesigns = require(Config.GloveDesigns)
 local GlovesConfig = require(Config.GlovesConfig)
 local PetsConfig = require(Config.PetsConfig)
 local TrainingAreaConfig = require(Config.TrainingAreaConfig)
@@ -139,6 +140,42 @@ return function(t)
 			for r = 1, 8 do
 				t.truthy(current[r].Multiplier > previous[r].Multiplier, `{current[r].Name} beats {previous[r].Name}`)
 			end
+		end
+	end)
+
+	t.test("every glove has a complete, valid design", function()
+		local valid = {
+			Shell = { Mitt = true, Boxing = true, Gauntlet = true, Armored = true, Claw = true },
+			Knuckles = { Pad = true, Plates = true, Rivets = true, Ridge = true, Segmented = true, Spikes = true, Crystal = true, Rocks = true, Horns = true, Bolt = true, Blades = true },
+			Cuff = { Wrap = true, Strap = true, Bracer = true, Flared = true, Crown = true, Rings = true },
+			Emblem = { Badge = true, Diamond = true, Sun = true, Star = true, Snowflake = true, Crest = true, Orb = true, Ring = true, Leaf = true },
+			Extras = { Stitching = true, Seams = true, Plating = true, Inlay = true, Channels = true, Fins = true, Tail = true, Shards = true, Orbit = true, Swirl = true, Halo = true },
+			Effect = { Glow = true, Sparks = true, Embers = true, Frost = true, Heat = true, Cosmic = true },
+		}
+		local signatures = {}
+		for _, glove in GlovesConfig.List do
+			local design = GloveDesigns[glove.Id]
+			t.truthy(design, `{glove.Id} has a design`)
+			t.truthy(valid.Shell[design.Shell], `{glove.Id} shell {design.Shell}`)
+			t.truthy(valid.Knuckles[design.Knuckles], `{glove.Id} knuckles {design.Knuckles}`)
+			t.truthy(valid.Cuff[design.Cuff], `{glove.Id} cuff {design.Cuff}`)
+			t.truthy(design.Emblem == nil or valid.Emblem[design.Emblem], `{glove.Id} emblem`)
+			t.truthy(design.Effect == nil or valid.Effect[design.Effect], `{glove.Id} effect`)
+			for _, extra in design.Extras do
+				t.truthy(valid.Extras[extra], `{glove.Id} extra {extra}`)
+			end
+			for _, key in { "Primary", "Secondary", "Trim", "Accent" } do
+				t.truthy(typeof(design.Colors[key]) == "Color3", `{glove.Id} colour {key}`)
+			end
+			for _, key in { "Primary", "Secondary", "Trim" } do
+				t.truthy(typeof(design.Mats[key]) == "EnumItem", `{glove.Id} material {key}`)
+			end
+			t.truthy(design.Effect == nil or design.Colors.Glow ~= nil or design.Effect == "Glow", `{glove.Id} has a glow colour for its effect`)
+
+			-- No two gloves may be the same model in a different colour.
+			local signature = `{design.Shell}|{design.Knuckles}|{design.Cuff}|{design.Emblem}|{table.concat(design.Extras, ",")}`
+			t.truthy(not signatures[signature], `{glove.Id} has the same shape as {signatures[signature]}`)
+			signatures[signature] = glove.Id
 		end
 	end)
 

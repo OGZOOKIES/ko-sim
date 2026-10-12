@@ -119,6 +119,11 @@ function Net.Fire(name: string, player: Player, ...: any)
 	remote:FireClient(player, ...)
 end
 
+function Net.FireAll(name: string, ...: any)
+	local remote = getRemote(name, "RemoteEvent") :: RemoteEvent
+	remote:FireAllClients(...)
+end
+
 function Net.Notify(player: Player, message: string, kind: string?)
 	Net.Fire("Notify", player, message, kind or "Info")
 end

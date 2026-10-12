@@ -13,7 +13,7 @@
 --   SelectBag(bagId) / SetAutoTrain(enabled)
 --   UnlockWorld(worldId) / TravelToWorld(worldId)
 --   StartLaunch()                      -- start charging at the launch station you're standing at
---   ReleasePunch(sessionId, charge)    -- release the charging punch
+--   ReleasePunch(sessionId, charge)    -- release the charging punch; charge = "auto" for Quick Punch
 --
 -- Events:
 --   Train            client -> server, no arguments
@@ -22,6 +22,7 @@
 --   ChargeStarted    server -> client (info)
 --   LaunchStarted    server -> client (info)
 --   LaunchEnded      server -> client (result)
+--   PunchFx          server -> all clients (who punched, glove, where) for animations and effects
 
 local Remotes = {
 	Functions = {
@@ -50,6 +51,7 @@ local Remotes = {
 		"ChargeStarted",
 		"LaunchStarted",
 		"LaunchEnded",
+		"PunchFx",
 	},
 }
 

@@ -1,17 +1,20 @@
 -- The punch-and-launch mechanic. The server decides everything that matters:
 --
---   1. BeginCharge: the player triggers the dummy's prompt (or Retry). The server checks they are
---      loaded, standing at the station, not already launching and off cooldown, then starts a
+--   1. BeginCharge: the player holds the dummy's prompt (or presses Retry). The server checks they
+--      are loaded, standing at the station, not already launching and off cooldown, then starts a
 --      session and tells the client to show the meter.
---   2. Release: the client sends the charge it showed. The server only accepts it if its own
---      meter really passed through that value within the last few hundred ms (network delay);
---      otherwise it uses its own value. A punch left charging is released automatically.
---   3. Launch: the server spawns a ragdoll it simulates itself (network owner = server) and gives
+--   2. Release: the client sends the charge it showed, or "auto" for a Quick Punch. A shown charge
+--      is accepted only if the server's own meter passed through it within the player's ping
+--      window; otherwise the server's value is used. Perfect is decided here, never by the client.
+--      A punch left charging is released automatically as a Quick Punch.
+--   3. Punch: everyone is told to play the punch (PunchFx). After LaunchConfig.ImpactDelay (when
+--      the fist connects) the server launches.
+--   4. Launch: the server spawns a ragdoll it simulates itself (network owner = server) and gives
 --      it a velocity aimed at the distance from Formulas.LaunchDistance.
---   4. Flight: every frame the server measures the ragdoll's distance along the runway. The launch
+--   5. Flight: every frame the server measures the ragdoll's distance along the runway. The launch
 --      ends when it settles, leaves the runway (the last on-runway distance counts) or hits the
 --      time limit. The client never reports positions.
---   5. Finish: runs once per session (state check), awards Wins once, and removes the ragdoll.
+--   6. Finish: runs once per session (state check), awards Wins once, and removes the ragdoll.
 --
 -- Players leaving mid-launch get no reward and their ragdoll is removed.
 
@@ -22,6 +25,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local LaunchConfig = require(Shared.Config.LaunchConfig)
+local PunchConfig = require(Shared.Config.PunchConfig)
 local WorldsConfig = require(Shared.Config.WorldsConfig)
 local Formulas = require(Shared.Logic.Formulas)
 local Log = require(Shared.Utilities.Log)
@@ -37,9 +41,11 @@ type Session = {
 	Id: number,
 	Player: Player,
 	World: string,
-	State: string, -- "Charging" | "Flying" | "Ended"
+	State: string, -- "Charging" | "Punching" | "Flying" | "Ended"
 	ChargeStart: number,
 	Cycle: number,
+	Perfect: boolean,
+	Quick: boolean,
 	Ragdoll: Model?,
 	Root: BasePart?,
 	LaunchTime: number,
@@ -104,16 +110,18 @@ local function finish(session: Session, distance: number, reason: string)
 		Wins = reward.Wins,
 		Best = reward.Best,
 		IsNewBest = reward.IsNewBest,
+		Perfect = session.Perfect,
+		Quick = session.Quick,
 		Reason = reason,
 	})
 end
 
-local function launch(session: Session, data, charge: number)
+local function launch(session: Session, data, timingFactor: number)
 	local player = session.Player
 	local layout = WorldService.GetLayout(session.World)
 	local world = WorldsConfig.ById[session.World]
 
-	local targetDistance = Formulas.LaunchDistance(data, session.World, charge)
+	local targetDistance = Formulas.LaunchDistance(data, session.World, timingFactor)
 	local spread = Formulas.LaunchSpread(data)
 	local angle = math.rad(LaunchConfig.AngleDegrees + rng:NextNumber(-1, 1) * LaunchConfig.AngleSpreadDegrees * spread)
 	local sideAngle = math.rad(rng:NextNumber(-1, 1) * LaunchConfig.SideSpreadDegrees * spread)
@@ -141,15 +149,15 @@ local function launch(session: Session, data, charge: number)
 			part.AssemblyLinearVelocity = velocity
 		end
 	end
-	root.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-6, 6), rng:NextNumber(-3, 3), rng:NextNumber(-14, -6))
+	-- Tumble forward (around the sideways axis) with a little random twist.
+	root.AssemblyAngularVelocity = layout.Right * rng:NextNumber(-14, -8) + Vector3.new(0, rng:NextNumber(-3, 3), 0)
 
-	for _, soundId in { "rbxasset://sounds/swordlunge.wav", "rbxasset://sounds/uuhhh.mp3" } do
-		local sound = Instance.new("Sound")
-		sound.SoundId = soundId
-		sound.Volume = 0.8
-		sound.Parent = root
-		sound:Play()
-	end
+	local sound = Instance.new("Sound")
+	sound.SoundId = PunchConfig.Sounds.Ragdoll
+	sound.Volume = 0.7
+	sound.RollOffMaxDistance = 300
+	sound.Parent = root
+	sound:Play()
 
 	session.State = "Flying"
 	session.Ragdoll = model
@@ -166,10 +174,10 @@ local function launch(session: Session, data, charge: number)
 		Origin = layout.Origin,
 		Forward = layout.Forward,
 		Right = layout.Right,
-		Charge = charge,
-		Perfect = Formulas.IsPerfect(charge),
+		Perfect = session.Perfect,
+		Quick = session.Quick,
 	})
-	log.debug(`{player.Name} launched: charge {math.floor(charge * 100)}%, target {math.floor(targetDistance)} studs`)
+	log.debug(`{player.Name} launched: timing x{math.floor(timingFactor * 100) / 100}, target {math.floor(targetDistance)} studs`)
 end
 
 local function updateFlight(session: Session, dt: number)
@@ -209,12 +217,16 @@ local function updateFlight(session: Session, dt: number)
 	end
 end
 
--- Accept the client's charge only if the server's meter showed it recently.
-local function validatedCharge(player: Player, session: Session, clientCharge: any): number
+-- Returns the charge to use and whether it was a Quick Punch.
+-- A shown charge is trusted only if the server's meter really showed it within the ping window.
+local function validatedCharge(player: Player, session: Session, clientCharge: any): (number, boolean)
+	if clientCharge == "auto" then
+		return LaunchConfig.AutoCharge, true
+	end
 	local elapsed = os.clock() - session.ChargeStart
 	local serverCharge = Formulas.ChargeAt(elapsed, session.Cycle)
 	if type(clientCharge) ~= "number" or clientCharge ~= clientCharge or clientCharge < 0 or clientCharge > 1 then
-		return serverCharge
+		return serverCharge, false
 	end
 
 	local ok, ping = pcall(function()
@@ -224,10 +236,10 @@ local function validatedCharge(player: Player, session: Session, clientCharge: a
 	for i = 0, 25 do
 		local t = elapsed - window * i / 25
 		if math.abs(Formulas.ChargeAt(t, session.Cycle) - clientCharge) <= 0.03 then
-			return clientCharge
+			return clientCharge, false
 		end
 	end
-	return serverCharge
+	return serverCharge, false
 end
 
 function LaunchService.BeginCharge(player: Player, worldId: string): (boolean, string?)
@@ -257,13 +269,16 @@ function LaunchService.BeginCharge(player: Player, worldId: string): (boolean, s
 	end
 
 	nextSessionId += 1
+	local cycle = Formulas.ChargeCycle(data)
 	local session: Session = {
 		Id = nextSessionId,
 		Player = player,
 		World = worldId,
 		State = "Charging",
 		ChargeStart = os.clock(),
-		Cycle = Formulas.ChargeCycle(data),
+		Cycle = cycle,
+		Perfect = false,
+		Quick = false,
 		Ragdoll = nil,
 		Root = nil,
 		LaunchTime = 0,
@@ -275,14 +290,15 @@ function LaunchService.BeginCharge(player: Player, worldId: string): (boolean, s
 
 	Net.Fire("ChargeStarted", player, {
 		SessionId = session.Id,
-		Cycle = session.Cycle,
-		SweetSpotMin = LaunchConfig.SweetSpotMin,
+		Cycle = cycle,
+		SweetSpotMin = Formulas.SweetSpotMin(cycle),
 		MaxChargeTime = LaunchConfig.MaxChargeTime,
+		DummyPosition = layout.StationPosition,
 	})
 
 	task.delay(LaunchConfig.MaxChargeTime, function()
 		if sessions[player] == session and session.State == "Charging" then
-			LaunchService.Release(player, session.Id, nil)
+			LaunchService.Release(player, session.Id, "auto")
 		end
 	end)
 	return true, nil
@@ -299,7 +315,38 @@ function LaunchService.Release(player: Player, sessionId: number, clientCharge: 
 		session.EndedAt = os.clock()
 		return false
 	end
-	launch(session, data, validatedCharge(player, session, clientCharge))
+
+	local charge, quick = validatedCharge(player, session, clientCharge)
+	local perfect = not quick and Formulas.IsPerfect(charge, session.Cycle)
+	local timingFactor = Formulas.TimingFactor(charge, perfect)
+	session.State = "Punching"
+	session.Perfect = perfect
+	session.Quick = quick
+
+	local layout = WorldService.GetLayout(session.World)
+	Net.FireAll("PunchFx", {
+		UserId = player.UserId,
+		GloveId = data.EquippedGlove,
+		Position = layout.StationPosition,
+		Direction = layout.Forward,
+		Perfect = perfect,
+		Power = timingFactor,
+		Delay = LaunchConfig.ImpactDelay,
+	})
+
+	-- Launch when the fist connects, if nothing changed in the meantime.
+	task.delay(LaunchConfig.ImpactDelay, function()
+		if sessions[player] ~= session or session.State ~= "Punching" or not player.Parent then
+			return
+		end
+		local current = PlayerDataService.Get(player)
+		if not current then
+			session.State = "Ended"
+			session.EndedAt = os.clock()
+			return
+		end
+		launch(session, current, timingFactor)
+	end)
 	return true
 end
 

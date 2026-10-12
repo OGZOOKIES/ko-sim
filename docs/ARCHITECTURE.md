@@ -51,6 +51,49 @@ Panels only rebuild when their `Key(data)` changes, so they don't flicker while 
 4. Every frame the server measures the ragdoll's position along the runway. The launch ends when the ragdoll settles, leaves the runway (the last on-runway distance counts), or reaches `MaxFlightTime`. A session can only end once, so Wins are awarded once.
 5. Ragdolls are in a collision group that ignores characters and other ragdolls, so players can't interfere with each other.
 
+## Gloves
+
+- `Shared/Config/GloveDesigns.luau` describes all 50 gloves. Each one picks:
+  - a shell
+  - a knuckle style
+  - a cuff
+  - an emblem
+  - extra details
+  - an effect
+  - a palette and materials
+
+  A test makes sure no two gloves share the same construction.
+- `Shared/Gloves/GloveBuilder.luau` turns a design into parts:
+  - `Build` / `BuildPair` make the 3D shop previews.
+  - `Attach` puts the pair on a character. It works on R15 (hands) and R6 (arms), welds the gloves on, and replaces any old pair, so respawning never duplicates them.
+- `ShopService` attaches the gloves on spawn and whenever you buy or equip a glove. The shop preview and the worn gloves use the same builder, so they always match.
+
+## The punch
+
+| Step | Where |
+|---|---|
+| Hold E on the dummy → charge (stance, wind-up pose, meter) | `LaunchController`, `PunchAnimator` |
+| Release (let go of E / RELEASE / F) or Quick Punch (Q) | `LaunchController` → `ReleasePunch` |
+| Server checks the timing, decides Perfect, tells everyone to play the punch | `LaunchService.Release` → `PunchFx` |
+| After `ImpactDelay` the fist connects and the server launches the ragdoll | `LaunchService` |
+| Flash, shockwave, sparks, sound, field-of-view kick and camera shake | `ImpactFx`, `LaunchController` |
+| Follow camera (skippable), live readout, runway progress bar | `LaunchController` |
+| Results count up, then "Punch again" | `LaunchController` |
+
+- **Perfect window:** the Perfect zone always lasts `LaunchConfig.PerfectWindow` seconds at each peak of the meter, so the Charge Speed upgrade only ever helps.
+- **Quick Punch:** uses `AutoCharge` and can never be Perfect, so precise timing is optional but still rewarded.
+- **Animations:** the punch is procedural and works on R15 and R6 with no uploads. To use real animations, upload them and paste the ids into `Shared/Config/PunchConfig.luau` (the strike should have an `Impact` marker). Sound ids are in the same file.
+
+## Multipliers
+
+Every multiplier is documented and calculated in `Shared/Logic/Formulas.luau`. Each one feeds exactly one quantity:
+- **Training:** bag, rebirths, pets, Training Power upgrade.
+- **Punch force:** glove launch force.
+- **Distance:** timing, Launch Control.
+- **Wins:** Win Bonus.
+
+`Formulas.Breakdown` feeds the in-game 📊 Stats panel, and a test checks that the panel's numbers multiply out to the real totals.
+
 ## Training Grounds
 
 Built by `ServerScriptService/World/TrainingArea/` for every world. `WorldBuilder` calls it, and rebuilding replaces the old model instead of duplicating it:

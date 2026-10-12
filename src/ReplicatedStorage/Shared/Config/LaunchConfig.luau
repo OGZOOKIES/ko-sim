@@ -3,14 +3,20 @@
 
 local LaunchConfig = {
 	-- Charge meter: rises 0 -> 1 over ChargeCycle seconds, then falls back, and repeats.
+	-- The Charge Speed upgrade shortens the cycle.
 	ChargeCycle = 1.3,
-	-- Releasing at or above this charge is a "Perfect" punch.
-	SweetSpotMin = 0.88,
+	-- The "Perfect" zone at the top of the meter lasts this many seconds per peak, whatever the
+	-- charge speed, so faster charging never makes Perfects harder.
+	PerfectWindow = 0.3,
 	TimingBonus = 1.25,
 	-- Releasing at 0 charge still gives this fraction of full distance.
 	MinChargeFactor = 0.4,
-	-- Server releases the punch automatically after this many seconds.
+	-- Quick Punch (no timing needed) and punches left charging use this charge, never Perfect.
+	AutoCharge = 0.85,
+	-- Server releases the punch automatically (as a Quick Punch) after this many seconds.
 	MaxChargeTime = 8,
+	-- Seconds from release to the fist connecting; matches the punch animation.
+	ImpactDelay = 0.12,
 
 	-- Launch angle above the runway, plus random spread (Launch Control reduces spread).
 	AngleDegrees = 32,

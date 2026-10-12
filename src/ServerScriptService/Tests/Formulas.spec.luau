@@ -81,10 +81,43 @@ return function(t)
 		t.near(Formulas.ChargeAt(1, 1), 1)
 		t.near(Formulas.ChargeAt(1.25, 1), 0.75)
 		t.near(Formulas.ChargeAt(2, 1), 0)
-		t.truthy(Formulas.IsPerfect(LaunchConfig.SweetSpotMin))
-		t.truthy(not Formulas.IsPerfect(LaunchConfig.SweetSpotMin - 0.01))
-		t.truthy(Formulas.ChargeFactor(1) > Formulas.ChargeFactor(0.8), "perfect beats an early release")
-		t.near(Formulas.ChargeFactor(0), LaunchConfig.MinChargeFactor)
+		local cycle = LaunchConfig.ChargeCycle
+		local sweet = Formulas.SweetSpotMin(cycle)
+		t.truthy(Formulas.IsPerfect(sweet, cycle))
+		t.truthy(not Formulas.IsPerfect(sweet - 0.01, cycle))
+		t.truthy(Formulas.TimingFactor(1, true) > Formulas.TimingFactor(0.8, false), "perfect beats an early release")
+		t.near(Formulas.TimingFactor(0, false), LaunchConfig.MinChargeFactor)
+		t.near(Formulas.TimingFactor(1, true), LaunchConfig.TimingBonus)
+		t.truthy(Formulas.TimingFactor(LaunchConfig.AutoCharge, false) < Formulas.TimingFactor(1, true), "quick punch is weaker than a perfect")
+	end)
+
+	t.test("faster charging never shrinks the perfect window", function()
+		for _, cycle in { 1.3, 1.1, 0.975 } do
+			-- Time spent above the sweet spot per peak = 2 * (1 - sweet) * cycle.
+			local window = 2 * (1 - Formulas.SweetSpotMin(cycle)) * cycle
+			t.near(window, LaunchConfig.PerfectWindow, 1e-6, `window at cycle {cycle}`)
+		end
+		local data = DataTemplate.New()
+		local slow = Formulas.ChargeCycle(data)
+		data.Upgrades.ChargeSpeed = 5
+		t.truthy(Formulas.ChargeCycle(data) < slow, "Charge Speed makes the meter faster")
+	end)
+
+	t.test("stats breakdown matches the real formulas", function()
+		local data = DataTemplate.New()
+		data.Power = 12345
+		data.RebirthCount = 3
+		data.Upgrades.TrainingPower = 2
+		local breakdown = Formulas.Breakdown(data, "Greenfield")
+		local training = breakdown.Training
+		t.near(training[#training].Value, Formulas.TrainingGain(data), 1e-9, "training total")
+		local product = 1
+		for i = 1, #training - 1 do
+			product *= training[i].Value
+		end
+		t.near(product, Formulas.TrainingGain(data), 1e-6, "training factors multiply to the total")
+		t.near(breakdown.Launch[3].Value, Formulas.LaunchStrength(data), 1e-9, "punch force")
+		t.near(breakdown.Launch[1].Value * breakdown.Launch[2].Value, Formulas.LaunchStrength(data), 1e-6, "power x glove = punch force")
 	end)
 
 	t.test("launch distance grows with power and stays on the runway", function()

@@ -38,6 +38,7 @@ local MENU = {
 	{ Panel = "Rebirth", Text = "♻️ Rebirth", Color = Theme.Colors.Rebirth },
 	{ Panel = "Upgrades", Text = "⬆️ Upgrades", Color = Theme.Colors.Tokens },
 	{ Panel = "Worlds", Text = "🌍 Worlds", Color = Theme.Colors.Blue },
+	{ Panel = "Stats", Text = "📊 Stats", Color = Color3.fromRGB(90, 110, 170) },
 }
 
 local function pill(parent: Instance, order: number, icon: string, color: Color3): TextLabel
@@ -129,14 +130,14 @@ function Hud.Create(root: Instance, openPanel: (string) -> ()): HudElements
 		Name = "Menu",
 		AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(0, 10, 0.45, 0),
-		Size = UDim2.fromScale(0.3, 0.5),
+		Size = UDim2.fromScale(0.3, 0.58),
 		BackgroundTransparency = 1,
 		Parent = hud,
 	})
-	make("UIAspectRatioConstraint", { AspectRatio = 0.5, DominantAxis = Enum.DominantAxis.Height, Parent = menu })
-	make("UISizeConstraint", { MaxSize = Vector2.new(190, 380), Parent = menu })
+	make("UIAspectRatioConstraint", { AspectRatio = 0.4, DominantAxis = Enum.DominantAxis.Height, Parent = menu })
+	make("UISizeConstraint", { MaxSize = Vector2.new(190, 475), Parent = menu })
 	make("UIGridLayout", {
-		CellSize = UDim2.new(0.5, -4, 0.25, -6),
+		CellSize = UDim2.new(0.5, -4, 0.2, -6),
 		CellPadding = UDim2.fromOffset(6, 6),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = menu,

@@ -18,34 +18,58 @@ local make = Components.Make
 
 local GlovesPanel = {}
 
-local CAMERA_CFRAME = CFrame.lookAt(Vector3.new(0.4, 0.35, -4.6), Vector3.new(0, -0.25, 0))
+local PREVIEW_HEIGHT = 132
+local PREVIEW_FOV = 30
+local PREVIEW_ASPECT = 1.5 -- typical card width / preview height
 
--- A small 3D stage with the glove pair. Returns the model so it can be turned slowly.
-local function preview(card: Frame, gloveId: string, owned: boolean): Model
+-- A small photo stage for the glove pair: light neutral backdrop, soft key light from the
+-- upper left, a contact shadow, and a camera fitted to the pair's real bounding box so no glove
+-- is ever clipped. Returns the pair so it can turn gently.
+local function preview(card: Frame, gloveId: string): Model
 	local viewport = make("ViewportFrame", {
-		Size = UDim2.new(1, 0, 0, 104),
-		BackgroundColor3 = Theme.Colors.Background,
-		BackgroundTransparency = 0.2,
-		Ambient = Color3.fromRGB(150, 150, 165),
-		LightColor = Color3.fromRGB(255, 245, 230),
-		LightDirection = Vector3.new(-0.6, -1, 0.8),
-		ImageTransparency = if owned then 0 else 0.05,
+		Size = UDim2.new(1, 0, 0, PREVIEW_HEIGHT),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Ambient = Color3.fromRGB(150, 152, 166),
+		LightColor = Color3.fromRGB(255, 250, 240),
+		LightDirection = Vector3.new(-0.5, -0.8, 0.6),
 		Parent = card,
 	})
 	Components.Corner(viewport, 10)
-	local camera = Instance.new("Camera")
-	camera.FieldOfView = 38
-	camera.CFrame = CAMERA_CFRAME
-	camera.Parent = viewport
-	viewport.CurrentCamera = camera
+	make("UIGradient", {
+		Color = ColorSequence.new(Color3.fromRGB(226, 230, 240), Color3.fromRGB(150, 158, 182)),
+		Rotation = 90,
+		Parent = viewport,
+	})
 
 	local pair = GloveBuilder.BuildPair(gloveId)
 	pair.Parent = viewport
+	local boxCFrame, size = pair:GetBoundingBox()
+	local center = boxCFrame.Position
+
+	local shadow = Instance.new("Part")
+	shadow.Anchored = true
+	shadow.Color = Color3.new(0, 0, 0)
+	shadow.Transparency = 0.7
+	shadow.Size = Vector3.new(size.X * 0.95, 0.04, size.Z * 1.3)
+	shadow.Position = Vector3.new(center.X, center.Y - size.Y / 2 - 0.03, center.Z)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = shadow
+	shadow.Parent = viewport
+
+	-- Fit both the height and the width, with a little margin.
+	local tanHalf = math.tan(math.rad(PREVIEW_FOV / 2))
+	local distance = math.max(size.Y / 2 / tanHalf, size.X / 2 / (tanHalf * PREVIEW_ASPECT)) * 1.18 + size.Z / 2
+	local camera = Instance.new("Camera")
+	camera.FieldOfView = PREVIEW_FOV
+	camera.CFrame = CFrame.lookAt(center + Vector3.new(0, size.Y * 0.18, -distance), center)
+	camera.Parent = viewport
+	viewport.CurrentCamera = camera
 	return pair
 end
 
 function GlovesPanel.Create(ui)
-	local panel = Components.Panel(ui.Root, "🥊 Glove Shop", Theme.Colors.Power, ui.Close, 210, 262)
+	local panel = Components.Panel(ui.Root, "🥊 Glove Shop", Theme.Colors.Power, ui.Close, 210, 290)
 	local selectedWorld: string? = nil
 	local spinning: { Model } = {}
 	local spinConnection: RBXScriptConnection? = nil
@@ -73,7 +97,7 @@ function GlovesPanel.Create(ui)
 			if not panel.Frame.Visible then
 				return
 			end
-			local angle = math.sin(os.clock() * 0.8) * 0.35
+			local angle = math.sin(os.clock() * 0.7) * 0.3
 			for _, pair in spinning do
 				if pair.Parent then
 					pair:PivotTo(CFrame.Angles(0, angle, 0))
@@ -123,11 +147,11 @@ function GlovesPanel.Create(ui)
 			local design = GloveBuilder.GetDesign(glove.Id)
 			local card = Components.Card(panel.Content, glove.Index, if equipped then Theme.Colors.Good else nil)
 
-			table.insert(spinning, preview(card, glove.Id, owned))
+			table.insert(spinning, preview(card, glove.Id))
 
 			local lines = make("Frame", {
-				Position = UDim2.fromOffset(0, 108),
-				Size = UDim2.new(1, 0, 1, -144),
+				Position = UDim2.fromOffset(0, PREVIEW_HEIGHT + 4),
+				Size = UDim2.new(1, 0, 1, -(PREVIEW_HEIGHT + 40)),
 				BackgroundTransparency = 1,
 				Parent = card,
 			})

@@ -54,12 +54,10 @@ local function gloveShop(parent: Instance, origin: Vector3, env, world)
 	})
 	-- The world's legendary glove pair on show.
 	local top = pedestal(kiosk.Model, kiosk.Display, env, 3.6, 2.6)
-	for _, side in { "Right", "Left" } do
-		local glove = GloveBuilder.Build(`{world.Id}_10`, side, 1.5)
-		local x = if side == "Right" then 1.5 else -1.5
-		glove:PivotTo(top * CFrame.new(x, 3.3, 0) * CFrame.Angles(math.rad(-8), if side == "Right" then math.rad(-14) else math.rad(14), 0))
-		glove.Parent = kiosk.Model
-	end
+	-- Displayed as a pair, backs of the hands toward the customers (the pair faces its -Z).
+	local pair = GloveBuilder.BuildPair(`{world.Id}_10`, 1.4)
+	pair:PivotTo(top * CFrame.new(0, 2.7, 0))
+	pair.Parent = kiosk.Model
 	prompt(kiosk.Counter, "Open Shop", "Glove Shop", "Gloves")
 end
 

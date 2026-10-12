@@ -78,15 +78,22 @@ Panels only rebuild when their `Key(data)` changes, so they don't flicker while 
 ## Gloves
 
 - `Shared/Config/GloveDesigns.luau` describes all 50 gloves. Each one picks:
-  - a shell
+  - a shell (padded Mitt/Boxing/Heavy, slim Combat with curled fingers, or armoured Gauntlet/Claw)
   - a knuckle style
+  - back-of-hand armour
   - a cuff
-  - an emblem
-  - extra details
-  - an effect
+  - an emblem and where it goes (back of the hand or cuff)
+  - extra details (stitching, seams, rivets, energy channels and so on)
   - a palette and materials
 
-  A test makes sure no two gloves share the same construction.
+  A test makes sure no two gloves share the same shell, knuckle, back and cuff combination.
+- **How the models are built:** the gloves are made from Roblox primitives, because the project has no imported meshes.
+  - Every main volume is a smooth ellipsoid.
+  - Thumbs and fingers are capsules running along their bones.
+  - Armour plates are thin curved "lens" ellipsoids.
+  - `surfaceFrame` places each plate, seam, rivet and emblem on the glove's reference shell along its surface normal, so details follow the curve of the hand instead of floating.
+- **Hand layout:** the back of the hand faces outward, the palm inward, and the thumb forward. That matches how R15 hands and R6 arms are oriented.
+- **Limits of this approach:** primitives can't do true sculpted surfaces, real recessed seams or baked stitching textures. For that next step, model the 50 gloves (or 6 base shells plus parts) in Blender, import them as MeshParts with PBR textures, and swap them in behind `GloveBuilder.Build`. The attach code, shop and stats wouldn't need to change.
 - `Shared/Gloves/GloveBuilder.luau` turns a design into parts:
   - `Build` / `BuildPair` make the 3D shop previews.
   - `Attach` puts the pair on a character. It works on R15 (hands) and R6 (arms), welds the gloves on, and replaces any old pair, so respawning never duplicates them.

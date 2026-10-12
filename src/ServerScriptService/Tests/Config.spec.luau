@@ -145,11 +145,12 @@ return function(t)
 
 	t.test("every glove has a complete, valid design", function()
 		local valid = {
-			Shell = { Mitt = true, Boxing = true, Gauntlet = true, Armored = true, Claw = true },
-			Knuckles = { Pad = true, Plates = true, Rivets = true, Ridge = true, Segmented = true, Spikes = true, Crystal = true, Rocks = true, Horns = true, Bolt = true, Blades = true },
-			Cuff = { Wrap = true, Strap = true, Bracer = true, Flared = true, Crown = true, Rings = true },
+			Shell = { Mitt = true, Boxing = true, Heavy = true, Combat = true, Gauntlet = true, Claw = true },
+			Knuckles = { Padded = true, Ridge = true, Plates = true, Guard = true, Segmented = true, Spikes = true, Crystal = true, Rocks = true, Horns = true, Bolt = true, Blades = true, Wood = true },
+			Back = { None = true, Panel = true, Layered = true, Wood = true, Scales = true, Leaf = true, Ribs = true, Sun = true, Crystal = true },
+			Cuff = { Wrap = true, Lace = true, Strap = true, Bracer = true, Flared = true, Crown = true, Rings = true },
 			Emblem = { Badge = true, Diamond = true, Sun = true, Star = true, Snowflake = true, Crest = true, Orb = true, Ring = true, Leaf = true },
-			Extras = { Stitching = true, Seams = true, Plating = true, Inlay = true, Channels = true, Fins = true, Tail = true, Shards = true, Orbit = true, Swirl = true, Halo = true },
+			Extras = { Stitching = true, Seams = true, Straps = true, Rivets = true, Inlay = true, Channels = true, Fins = true, Tail = true, Shards = true, Swirl = true },
 			Effect = { Glow = true, Sparks = true, Embers = true, Frost = true, Heat = true, Cosmic = true },
 		}
 		local signatures = {}
@@ -159,6 +160,8 @@ return function(t)
 			t.truthy(valid.Shell[design.Shell], `{glove.Id} shell {design.Shell}`)
 			t.truthy(valid.Knuckles[design.Knuckles], `{glove.Id} knuckles {design.Knuckles}`)
 			t.truthy(valid.Cuff[design.Cuff], `{glove.Id} cuff {design.Cuff}`)
+			t.truthy(valid.Back[design.Back], `{glove.Id} back {design.Back}`)
+			t.truthy(design.EmblemOn == nil or design.EmblemOn == "Back" or design.EmblemOn == "Cuff", `{glove.Id} emblem position`)
 			t.truthy(design.Emblem == nil or valid.Emblem[design.Emblem], `{glove.Id} emblem`)
 			t.truthy(design.Effect == nil or valid.Effect[design.Effect], `{glove.Id} effect`)
 			for _, extra in design.Extras do
@@ -172,8 +175,9 @@ return function(t)
 			end
 			t.truthy(design.Effect == nil or design.Colors.Glow ~= nil or design.Effect == "Glow", `{glove.Id} has a glow colour for its effect`)
 
-			-- No two gloves may be the same model in a different colour.
-			local signature = `{design.Shell}|{design.Knuckles}|{design.Cuff}|{design.Emblem}|{table.concat(design.Extras, ",")}`
+			-- No two gloves may share a construction (shell, knuckles, back armour and cuff), so no
+			-- glove is just another glove in a different colour.
+			local signature = `{design.Shell}|{design.Knuckles}|{design.Back}|{design.Cuff}`
 			t.truthy(not signatures[signature], `{glove.Id} has the same shape as {signatures[signature]}`)
 			signatures[signature] = glove.Id
 		end

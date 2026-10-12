@@ -87,9 +87,10 @@ local function monument(parent: Instance, o: Vector3, world, env)
 	local scale = 3.8
 	local statue = GloveBuilder.Build(gloveId, "Right", scale)
 	local design = GloveBuilder.GetDesign(gloveId)
-	local cuffDepth = 1.4 * scale * design.Scale
-	local center = base + V(0, 5.4 + cuffDepth, 0)
-	statue:PivotTo(CFrame.fromMatrix(center, -Vector3.zAxis, -Vector3.yAxis, -Vector3.xAxis))
+	-- Flipped so the fist points up and the back of the hand (+X in glove space) faces the spawn.
+	local cuffTop = 1.35 * scale * design.Scale
+	local center = base + V(0, 5.4 + cuffTop, 0)
+	statue:PivotTo(CFrame.fromMatrix(center, Vector3.xAxis, -Vector3.yAxis, -Vector3.zAxis))
 	statue.Name = "GloveStatue"
 	statue.Parent = model
 

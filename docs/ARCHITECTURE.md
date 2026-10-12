@@ -51,6 +51,30 @@ Panels only rebuild when their `Key(data)` changes, so they don't flicker while 
 4. Every frame the server measures the ragdoll's position along the runway. The launch ends when the ragdoll settles, leaves the runway (the last on-runway distance counts), or reaches `MaxFlightTime`. A session can only end once, so Wins are awarded once.
 5. Ragdolls are in a collision group that ignores characters and other ragdolls, so players can't interfere with each other.
 
+## Worlds and environments
+
+`World/WorldBuilder.luau` builds each world from these modules:
+
+| Module | Builds |
+|---|---|
+| `Hub` | Stone plaza on a foundation, avenue, lawns, perimeter wall, lamps, benches, spawn monument (a giant statue of the world's top glove), welcome arch |
+| `Stations` | Glove shop, egg station, rebirth altar, world portal, pet upgrader, upgrade shop |
+| `Architecture` | The shared kit those are made from: kiosk, arch, pillar, lamp post |
+| `TrainingArea` | The Training Grounds (see below) |
+| `LaunchArena` | Punch platform, stands, LAUNCH ZONE gate, display dummy |
+| `Runway` | Stone track, zone surfaces, curbs, zone sign pylons, painted markings, finish backdrop |
+| `Landscape` | Roblox Terrain hills, a mountain ring and lakes (water, ice or lava). Cosmic gets floating rock islands instead. Plus prop groves |
+| `Props` | Themed scenery: trees, palms, cacti, pines, crystals, volcanic pieces |
+
+- **Per-world look:** each world's palette, materials, terrain and sky are in `Shared/Config/EnvironmentConfig.luau`. All worlds share one architectural language (stone, navy, gold), so they feel like one game.
+- **Client side:** `WorldController` applies each world's lighting, colour tint and clouds when you travel.
+
+## Pets
+
+- `Shared/Pets/PetBuilder.luau` builds pets from 25 body forms (bunny, owl, fox, dragon, slime, golem and so on). Each species picks its form in `PetsConfig`.
+- The same models appear as followers, in the inventory, on egg cards and in the hatch reveal.
+- Tiers change the finish: Gold (foil), Diamond (crystal and sparkles), Rainbow (colour cycling).
+
 ## Gloves
 
 - `Shared/Config/GloveDesigns.luau` describes all 50 gloves. Each one picks:

@@ -9,6 +9,7 @@ local Format = require(Shared.Utilities.Format)
 
 local UI = script.Parent.Parent
 local Components = require(UI.Components)
+local Previews = require(UI.Previews)
 local Theme = require(UI.Theme)
 
 local PetsPanel = {}
@@ -24,7 +25,7 @@ function PetsPanel.PetName(speciesId: string, tier: number): string
 end
 
 function PetsPanel.Create(ui)
-	local panel = Components.Panel(ui.Root, "🐾 Pets", Theme.Colors.Good, ui.Close, 190, 150)
+	local panel = Components.Panel(ui.Root, "🐾 Pets", Theme.Colors.Good, ui.Close, 190, 226)
 
 	local summary = Components.Label({
 		Size = UDim2.new(0.65, 0, 1, 0),
@@ -93,7 +94,8 @@ function PetsPanel.Create(ui)
 			local rarity = species and PetsConfig.RaritiesById[species.Rarity]
 			local equipped = table.find(data.EquippedPets, pet.Id) ~= nil
 			local card = Components.Card(panel.Content, i, if equipped then Theme.Colors.Good else nil)
-			Components.CardLines(card, {
+			Previews.Pet(card, pet.Species, pet.Tier, UDim2.new(1, 0, 0, 84), nil, if rarity then rarity.Color else nil)
+			Components.CardLines(Components.Below(card, 88), {
 				{ Text = PetsPanel.PetName(pet.Species, pet.Tier), Color = if species then species.Color else nil, Size = 22 },
 				{ Text = if rarity then rarity.Id else "?", Color = if rarity then rarity.Color else nil },
 				{ Text = `{Format.Multiplier(multipliers[pet.Id])} Power`, Color = Theme.Colors.Power },

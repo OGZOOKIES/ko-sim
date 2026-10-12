@@ -9,7 +9,10 @@ local PetsConfig = require(Shared.Config.PetsConfig)
 local Formulas = require(Shared.Logic.Formulas)
 local Format = require(Shared.Utilities.Format)
 
+local RunService = game:GetService("RunService")
+
 local Components = require(script.Parent.Components)
+local Previews = require(script.Parent.Previews)
 local Theme = require(script.Parent.Theme)
 
 local make = Components.Make
@@ -42,6 +45,28 @@ function HatchAnimation.Play(root: Instance, eggColor: Color3, pet: { Species: s
 	make("UIAspectRatioConstraint", { AspectRatio = 0.78, Parent = egg })
 	make("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = egg })
 	Components.Stroke(egg, Theme.Darken(eggColor), 4)
+	Components.Shade(egg, Theme.Shading)
+	-- A band and a few spots so the egg reads as an object, not a blob.
+	make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.55),
+		Size = UDim2.new(0.95, 0, 0.07, 0),
+		BackgroundColor3 = Theme.Colors.Accent,
+		BorderSizePixel = 0,
+		ZIndex = 32,
+		Parent = egg,
+	})
+	for _, spot in { { 0.3, 0.3, 0.16 }, { 0.68, 0.24, 0.12 }, { 0.6, 0.75, 0.15 }, { 0.26, 0.72, 0.1 } } do
+		local dot = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(spot[1], spot[2]),
+			Size = UDim2.fromScale(spot[3], spot[3] * 0.78),
+			BackgroundColor3 = Theme.Darken(eggColor, 0.25),
+			ZIndex = 32,
+			Parent = egg,
+		})
+		make("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = dot })
+	end
 
 	local flash = make("Frame", {
 		Size = UDim2.fromScale(1, 1),
@@ -82,22 +107,34 @@ function HatchAnimation.Play(root: Instance, eggColor: Color3, pet: { Species: s
 		local card = make("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromScale(0.4, 0.42),
+			Size = UDim2.fromScale(0.4, 0.62),
 			BackgroundColor3 = Theme.Colors.Panel,
 			ZIndex = 31,
 			Parent = overlay,
 		})
-		make("UISizeConstraint", { MinSize = Vector2.new(260, 200), MaxSize = Vector2.new(460, 300), Parent = card })
+		make("UISizeConstraint", { MinSize = Vector2.new(280, 340), MaxSize = Vector2.new(460, 470), Parent = card })
 		Components.Corner(card, 18)
 		Components.Stroke(card, rarity.Color, 4)
+		Components.Shade(card, Theme.SoftShading)
+
+		-- The pet itself, turning slowly on a glowing stage.
+		local viewport, model = Previews.Pet(card, pet.Species, pet.Tier, UDim2.fromScale(0.9, 0.5), UDim2.fromScale(0.05, 0.04), rarity.Color)
+		viewport.ZIndex = 32
+		local spinStart = os.clock()
+		local spin = RunService.RenderStepped:Connect(function()
+			model:PivotTo(CFrame.Angles(0, math.rad(-20) + (os.clock() - spinStart) * 1.6, 0))
+		end)
+		card.Destroying:Connect(function()
+			spin:Disconnect()
+		end)
 
 		local lines = {
-			{ Text = if pet.Tier > 1 then `{PetsConfig.Tiers[pet.Tier].Name} {species.Name}` else species.Name, Color = species.Color, Size = 0.3 },
-			{ Text = rarity.Id:upper(), Color = rarity.Color, Size = 0.2 },
-			{ Text = `{Format.Multiplier(Formulas.PetMultiplier(pet.Species, pet.Tier))} Power`, Color = Theme.Colors.Power, Size = 0.2 },
-			{ Text = "Tap to continue", Color = Theme.Colors.SubText, Size = 0.14 },
+			{ Text = if pet.Tier > 1 then `{PetsConfig.Tiers[pet.Tier].Name} {species.Name}` else species.Name, Color = species.Color:Lerp(Color3.new(1, 1, 1), 0.3), Size = 0.13 },
+			{ Text = rarity.Id:upper(), Color = rarity.Color, Size = 0.1 },
+			{ Text = `{Format.Multiplier(Formulas.PetMultiplier(pet.Species, pet.Tier))} Power`, Color = Theme.Colors.Power, Size = 0.1 },
+			{ Text = "Tap to continue", Color = Theme.Colors.SubText, Size = 0.07 },
 		}
-		local y = 0.06
+		local y = 0.555
 		for _, line in lines do
 			local label = Components.Label({
 				Text = line.Text,

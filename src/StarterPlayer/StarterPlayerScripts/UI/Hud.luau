@@ -49,22 +49,38 @@ local function pill(parent: Instance, order: number, icon: string, color: Color3
 		LayoutOrder = order,
 		Parent = parent,
 	})
-	make("UISizeConstraint", { MinSize = Vector2.new(84, 30), MaxSize = Vector2.new(190, 46), Parent = frame })
-	Components.Corner(frame, 20)
-	Components.Stroke(frame, color, 2)
+	make("UISizeConstraint", { MinSize = Vector2.new(92, 32), MaxSize = Vector2.new(196, 46), Parent = frame })
+	Components.Corner(frame, 23)
+	local stroke = Components.Stroke(frame, color, 2)
+	stroke.Transparency = 0.25
+	Components.Shade(frame, Theme.SoftShading)
+
+	-- Icon in a coloured disc on the left.
+	local disc = make("Frame", {
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 4, 0.5, 0),
+		Size = UDim2.new(0, 34, 0, 34),
+		BackgroundColor3 = color,
+		Parent = frame,
+	})
+	make("UIAspectRatioConstraint", { AspectRatio = 1, Parent = disc })
+	make("UISizeConstraint", { MaxSize = Vector2.new(38, 38), Parent = disc })
+	Components.Corner(disc, 19)
+	Components.Shade(disc, Theme.Shading)
 	Components.Label({
 		Text = icon,
-		Size = UDim2.new(0, 30, 1, -6),
-		Position = UDim2.fromOffset(6, 3),
-		MaxTextSize = 24,
-		Parent = frame,
+		Size = UDim2.fromScale(0.78, 0.78),
+		Position = UDim2.fromScale(0.11, 0.11),
+		MaxTextSize = 22,
+		Parent = disc,
 	})
 	return Components.Label({
 		Text = "0",
-		TextColor3 = color,
-		Size = UDim2.new(1, -44, 1, -8),
-		Position = UDim2.fromOffset(38, 4),
+		TextColor3 = Color3.new(1, 1, 1),
+		Size = UDim2.new(1, -52, 1, -10),
+		Position = UDim2.fromOffset(44, 5),
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextStrokeTransparency = 0.4,
 		MaxTextSize = 26,
 		Parent = frame,
 	})

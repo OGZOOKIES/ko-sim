@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local EnvironmentConfig = require(Shared.Config.EnvironmentConfig)
 local WorldsConfig = require(Shared.Config.WorldsConfig)
 
 local StarterPlayerScripts = script.Parent.Parent
@@ -42,6 +43,27 @@ local function applyLighting(worldId: string)
 		Decay = theme.AtmosphereDecay,
 		Density = theme.AtmosphereDensity,
 		Haze = theme.AtmosphereHaze,
+	}):Play()
+
+	-- Per-world colour grading and clouds.
+	local env = EnvironmentConfig[worldId]
+	if not env then
+		return
+	end
+	local correction = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+	if correction then
+		TweenService:Create(correction, info, { TintColor = env.Sky.Tint }):Play()
+	end
+	local clouds = workspace.Terrain:FindFirstChildOfClass("Clouds")
+	if not clouds then
+		clouds = Instance.new("Clouds")
+		clouds.Parent = workspace.Terrain
+	end
+	clouds.Enabled = env.Sky.CloudCover > 0
+	TweenService:Create(clouds, info, {
+		Cover = env.Sky.CloudCover,
+		Density = env.Sky.CloudDensity,
+		Color = env.Sky.CloudColor,
 	}):Play()
 end
 

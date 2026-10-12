@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local TrainingAreaConfig = require(ReplicatedStorage:WaitForChild("Shared").Config.TrainingAreaConfig)
+local EnvironmentConfig = require(ReplicatedStorage:WaitForChild("Shared").Config.EnvironmentConfig)
 local Parts = require(script.Parent.Parent.Parts)
 
 local P = TrainingAreaConfig.Palette
@@ -115,7 +116,7 @@ local function rock(parent: Instance, position: Vector3, size: number, rng: Rand
 	})
 end
 
-function Plaza.Build(parent: Instance, o: Vector3, theme, seed: number)
+function Plaza.Build(parent: Instance, o: Vector3, theme, seed: number, worldId: string)
 	local plants = TrainingAreaConfig.Plants[theme.Decor] or TrainingAreaConfig.Plants.Trees
 	local flowers = TrainingAreaConfig.Flowers
 	local rng = Random.new(seed)
@@ -125,15 +126,24 @@ function Plaza.Build(parent: Instance, o: Vector3, theme, seed: number)
 	model.Name = "Plaza"
 	model.Parent = parent
 
-	-- Extend the hub floor behind the pavilion.
+	-- Extend the hub's stone plaza behind the pavilion (same foundation and paving as the hub).
+	local env = EnvironmentConfig[worldId] or EnvironmentConfig.Greenfield
 	local width = Layout.PlazaMaxX - Layout.PlazaMinX
 	local depth = Layout.PlazaMaxZ - HUB_EDGE_Z
+	local centerX = (Layout.PlazaMinX + Layout.PlazaMaxX) / 2
+	Parts.Part(model, {
+		Name = "PlazaFoundation",
+		Size = Vector3.new(width, FLOOR_THICKNESS - 0.4, depth),
+		Position = flat(o, centerX, HUB_EDGE_Z + depth / 2, -FLOOR_THICKNESS / 2 - 0.2),
+		Color = env.StoneDark,
+		Material = env.StoneMaterial,
+	})
 	Parts.Part(model, {
 		Name = "PlazaFloor",
-		Size = Vector3.new(width, FLOOR_THICKNESS, depth),
-		Position = flat(o, (Layout.PlazaMinX + Layout.PlazaMaxX) / 2, HUB_EDGE_Z + depth / 2, -FLOOR_THICKNESS / 2),
-		Color = theme.Hub,
-		Material = theme.HubMaterial,
+		Size = Vector3.new(width, 0.4, depth),
+		Position = flat(o, centerX, HUB_EDGE_Z + depth / 2, -0.2),
+		Color = env.Floor,
+		Material = env.FloorMaterial,
 	})
 
 	-- A lawn border framing the pavilion.
@@ -175,12 +185,7 @@ function Plaza.Build(parent: Instance, o: Vector3, theme, seed: number)
 	-- Gentle grassy mounds along the back edge.
 	Parts.Ellipsoid(model, flat(o, -232, 186, -0.6), Vector3.new(46, 5, 14), { Name = "Mound", Color = plants[1], Material = Enum.Material.Grass })
 	Parts.Ellipsoid(model, flat(o, -168, 185, -0.6), Vector3.new(30, 4, 12), { Name = "Mound", Color = plants[3], Material = Enum.Material.Grass })
-
-	-- Far-off hills give depth without much geometry.
-	local hillColor = theme.Ground:Lerp(Color3.new(0, 0, 0), 0.12)
-	Parts.Ellipsoid(model, flat(o, -280, 330, -FLOOR_THICKNESS), Vector3.new(230, 70, 120), { Name = "Hill", Color = hillColor, Material = theme.GroundMaterial })
-	Parts.Ellipsoid(model, flat(o, -150, 380, -FLOOR_THICKNESS), Vector3.new(270, 95, 140), { Name = "Hill", Color = hillColor:Lerp(plants[3], 0.25), Material = theme.GroundMaterial })
-	Parts.Ellipsoid(model, flat(o, -40, 320, -FLOOR_THICKNESS), Vector3.new(190, 55, 100), { Name = "Hill", Color = hillColor, Material = theme.GroundMaterial })
+	-- (Far-off hills and mountains come from the world's terrain; see World/Landscape.)
 end
 
 return Plaza

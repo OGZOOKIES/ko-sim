@@ -1,4 +1,5 @@
--- Colours and fonts shared by every piece of UI.
+-- Colours and fonts shared by every piece of UI. Matches the game's art direction:
+-- deep midnight navy surfaces, warm gold for prestige, restrained cyan for energy.
 
 local rgb = Color3.fromRGB
 
@@ -7,24 +8,24 @@ local Theme = {
 	BodyFont = Enum.Font.GothamBold,
 
 	Colors = {
-		Background = rgb(28, 30, 48),
-		Panel = rgb(40, 44, 70),
-		Card = rgb(56, 61, 96),
-		CardHighlight = rgb(72, 80, 130),
+		Background = rgb(14, 18, 40),
+		Panel = rgb(24, 30, 62),
+		Card = rgb(36, 44, 86),
+		CardHighlight = rgb(52, 62, 116),
 		Text = rgb(255, 255, 255),
-		SubText = rgb(190, 200, 230),
-		Dark = rgb(15, 15, 25),
+		SubText = rgb(178, 190, 226),
+		Dark = rgb(8, 10, 24),
 
-		Accent = rgb(255, 190, 40),
-		Power = rgb(255, 110, 60),
-		Wins = rgb(255, 205, 50),
-		Rebirth = rgb(180, 100, 255),
-		Tokens = rgb(70, 210, 255),
+		Accent = rgb(255, 196, 64),
+		Power = rgb(255, 112, 64),
+		Wins = rgb(255, 200, 56),
+		Rebirth = rgb(176, 106, 255),
+		Tokens = rgb(72, 212, 255),
 
-		Good = rgb(80, 210, 100),
-		Bad = rgb(235, 75, 75),
-		Neutral = rgb(110, 120, 160),
-		Blue = rgb(60, 140, 255),
+		Good = rgb(76, 206, 108),
+		Bad = rgb(232, 72, 82),
+		Neutral = rgb(92, 104, 148),
+		Blue = rgb(64, 132, 255),
 	},
 
 	Icons = {
@@ -33,6 +34,10 @@ local Theme = {
 		Rebirth = "♻️",
 		Tokens = "🪙",
 	},
+
+	-- Vertical shading applied to buttons, cards and panels for depth.
+	Shading = ColorSequence.new(Color3.new(1, 1, 1), rgb(186, 186, 196)),
+	SoftShading = ColorSequence.new(Color3.new(1, 1, 1), rgb(214, 214, 224)),
 }
 
 -- A darker version of a colour, for borders and pressed states.

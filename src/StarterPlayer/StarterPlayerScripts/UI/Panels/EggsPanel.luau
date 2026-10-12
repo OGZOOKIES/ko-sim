@@ -13,12 +13,13 @@ local Format = require(Shared.Utilities.Format)
 local UI = script.Parent.Parent
 local Components = require(UI.Components)
 local HatchAnimation = require(UI.HatchAnimation)
+local Previews = require(UI.Previews)
 local Theme = require(UI.Theme)
 
 local EggsPanel = {}
 
 function EggsPanel.Create(ui)
-	local panel = Components.Panel(ui.Root, "🥚 Eggs", Theme.Colors.Wins, ui.Close, 170, 120)
+	local panel = Components.Panel(ui.Root, "🥚 Eggs", Theme.Colors.Wins, ui.Close, 170, 196)
 	local hatching = false
 
 	local summary = Components.Label({
@@ -79,7 +80,8 @@ function EggsPanel.Create(ui)
 			local species = PetsConfig.SpeciesById[entry.SpeciesId]
 			local rarity = PetsConfig.RaritiesById[species.Rarity]
 			local card = Components.Card(panel.Content, i, rarity.Color)
-			Components.CardLines(card, {
+			Previews.Pet(card, species.Id, 1, UDim2.new(1, 0, 0, 80), nil, rarity.Color)
+			Components.CardLines(Components.Below(card, 84), {
 				{ Text = species.Name, Color = species.Color, Size = 22 },
 				{ Text = rarity.Id, Color = rarity.Color },
 				{ Text = `🎲 {Format.Percent(entry.Chance)}` },

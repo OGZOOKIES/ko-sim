@@ -30,7 +30,7 @@ function TrainingArea.Build(parent: Instance, origin: Vector3, world): Model
 
 	Pavilion.Build(model, center)
 	Bags.Build(model, center, world.Id)
-	Plaza.Build(model, origin, world.Theme, world.Order * 77)
+	Plaza.Build(model, origin, world.Theme, world.Order * 77, world.Id)
 	ProgressBoard.Build(model, origin + TrainingAreaConfig.Layout.BoardPosition, world.Id)
 
 	model.Parent = parent

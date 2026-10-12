@@ -47,6 +47,15 @@ function Components.Stroke(parent: Instance, color: Color3, thickness: number?):
 	})
 end
 
+-- Vertical shading (lighter at the top) for depth.
+function Components.Shade(parent: Instance, sequence: ColorSequence?): UIGradient
+	return make("UIGradient", {
+		Color = sequence or Theme.SoftShading,
+		Rotation = 90,
+		Parent = parent,
+	})
+end
+
 function Components.Padding(parent: Instance, pixels: number)
 	make("UIPadding", {
 		PaddingLeft = UDim.new(0, pixels),
@@ -103,7 +112,8 @@ function Components.Button(props: { [string]: any }): TextButton
 	})
 	button:SetAttribute("BaseColor", color)
 	Components.Corner(button, props.CornerRadius or 10)
-	Components.Stroke(button, Theme.Darken(color), 2)
+	Components.Stroke(button, Theme.Darken(color, 0.45), 2.5)
+	Components.Shade(button, Theme.Shading)
 	make("UITextSizeConstraint", { MaxTextSize = props.MaxTextSize or 24, MinTextSize = 8, Parent = button })
 	make("UIPadding", {
 		PaddingLeft = UDim.new(0, 6),
@@ -187,31 +197,51 @@ function Components.Panel(root: Instance, title: string, color: Color3, onClose:
 		Parent = root,
 	})
 	make("UISizeConstraint", { MaxSize = Vector2.new(900, 640), Parent = frame })
-	Components.Corner(frame, 16)
-	Components.Stroke(frame, color, 3)
+	Components.Corner(frame, 18)
+	local frameStroke = Components.Stroke(frame, Theme.Colors.Accent, 2.5)
+	frameStroke.Transparency = 0.35
+	Components.Shade(frame, Theme.SoftShading)
 
+	-- Header: the panel's colour fading into navy, with a thin gold rule underneath.
 	local header = make("Frame", {
 		Name = "Header",
-		Size = UDim2.new(1, 0, 0, 50),
-		BackgroundColor3 = color,
+		Size = UDim2.new(1, 0, 0, 52),
+		BackgroundColor3 = Color3.new(1, 1, 1),
 		Parent = frame,
 	})
-	Components.Corner(header, 16)
+	Components.Corner(header, 18)
+	make("UIGradient", {
+		Color = ColorSequence.new(color, Theme.Darken(color, 0.55)),
+		Rotation = 0,
+		Parent = header,
+	})
+	make("Frame", {
+		Name = "Rule",
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 14, 1, 0),
+		Size = UDim2.new(1, -28, 0, 2),
+		BackgroundColor3 = Theme.Colors.Accent,
+		BackgroundTransparency = 0.2,
+		BorderSizePixel = 0,
+		Parent = header,
+	})
 	local titleLabel = Components.Label({
 		Text = title,
-		Size = UDim2.new(1, -70, 1, -8),
-		Position = UDim2.fromOffset(16, 4),
+		Size = UDim2.new(1, -76, 1, -10),
+		Position = UDim2.fromOffset(18, 5),
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextStrokeTransparency = 0.3,
 		MaxTextSize = 30,
 		Parent = header,
 	})
 	Components.Button({
 		Name = "Close",
-		Text = "X",
+		Text = "✕",
 		Color = Theme.Colors.Bad,
-		Size = UDim2.fromOffset(42, 42),
-		Position = UDim2.new(1, -46, 0, 4),
-		MaxTextSize = 26,
+		Size = UDim2.fromOffset(40, 40),
+		Position = UDim2.new(1, -48, 0, 6),
+		MaxTextSize = 22,
+		CornerRadius = 20,
 		OnClick = onClose,
 		Parent = header,
 	})
@@ -269,10 +299,23 @@ function Components.Card(parent: Instance, order: number, highlight: Color3?): F
 		LayoutOrder = order,
 		Parent = parent,
 	})
-	Components.Corner(card, 12)
-	Components.Stroke(card, highlight or Theme.Darken(Theme.Colors.Card, 0.3), if highlight then 3 else 2)
+	Components.Corner(card, 14)
+	local stroke = Components.Stroke(card, highlight or Theme.Colors.CardHighlight, if highlight then 3 else 1.5)
+	stroke.Transparency = if highlight then 0 else 0.2
+	Components.Shade(card, Theme.SoftShading)
 	Components.Padding(card, 8)
 	return card
+end
+
+-- A transparent area filling a card below `offset` pixels (e.g. under a preview image).
+function Components.Below(card: Frame, offset: number): Frame
+	return make("Frame", {
+		Name = "Body",
+		Position = UDim2.fromOffset(0, offset),
+		Size = UDim2.new(1, 0, 1, -offset),
+		BackgroundTransparency = 1,
+		Parent = card,
+	})
 end
 
 -- Stacks text lines from the top of a card. Returns the y offset below the last line.

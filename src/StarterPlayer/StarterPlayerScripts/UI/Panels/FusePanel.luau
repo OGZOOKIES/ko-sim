@@ -10,6 +10,7 @@ local Format = require(Shared.Utilities.Format)
 
 local UI = script.Parent.Parent
 local Components = require(UI.Components)
+local Previews = require(UI.Previews)
 local Theme = require(UI.Theme)
 local PetsPanel = require(script.Parent.PetsPanel)
 
@@ -18,7 +19,7 @@ local PURPLE = Color3.fromRGB(255, 120, 200)
 local FusePanel = {}
 
 function FusePanel.Create(ui)
-	local panel = Components.Panel(ui.Root, "✨ Pet Upgrader", PURPLE, ui.Close, 220, 160)
+	local panel = Components.Panel(ui.Root, "✨ Pet Upgrader", PURPLE, ui.Close, 220, 236)
 
 	Components.Label({
 		Text = `{PetsConfig.FuseCount} identical pets → 1 upgraded pet.  Gold x2  •  Diamond x3  •  Rainbow x4 (of the base)`,
@@ -78,7 +79,8 @@ function FusePanel.Create(ui)
 			local toMultiplier = Format.Multiplier(Formulas.PetMultiplier(group.Species, group.Tier + 1))
 
 			local card = Components.Card(panel.Content, i, if ready then PURPLE else nil)
-			Components.CardLines(card, {
+			Previews.Pet(card, group.Species, math.min(group.Tier + 1, #PetsConfig.Tiers), UDim2.new(1, 0, 0, 74))
+			Components.CardLines(Components.Below(card, 78), {
 				{ Text = `{fromName} ({fromMultiplier})`, Color = PetsConfig.SpeciesById[group.Species].Color, Size = 20 },
 				{
 					Text = `Owned: {group.Count}/{PetsConfig.FuseCount}`,

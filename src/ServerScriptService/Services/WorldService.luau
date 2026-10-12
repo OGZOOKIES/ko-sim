@@ -42,8 +42,15 @@ end
 function WorldService.Init()
 	RagdollFactory.SetupCollisionGroups()
 
+	-- Rebuild from scratch: remove a previously generated Worlds folder (never anything else).
+	local old = workspace:FindFirstChild("Worlds")
+	if old and old:GetAttribute("Generated") then
+		old:Destroy()
+	end
+
 	local folder = Instance.new("Folder")
 	folder.Name = "Worlds"
+	folder:SetAttribute("Generated", true)
 	folder.Parent = workspace
 
 	local started = os.clock()

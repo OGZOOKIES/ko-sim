@@ -5,7 +5,8 @@
 --
 --            z = -70:  Worlds   Gloves   Eggs   Rebirth
 --   spawn ---- path (z = 0) ----------------------- launch pad | dummy | runway ->
---            z = +70:  Training bags      Fuse   Upgrades
+--            z = +70:  Fuse   Upgrades
+--            z = +90..150: Training Grounds pavilion and plaza (x = -290..-140, see TrainingArea)
 --
 --   x = -290 .. 0   hub
 --   x = 0 .. end    runway, 80 studs wide, split into the ten landing zones
@@ -13,11 +14,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local BagsConfig = require(Shared.Config.BagsConfig)
 local EggsConfig = require(Shared.Config.EggsConfig)
+local TrainingAreaConfig = require(Shared.Config.TrainingAreaConfig)
 local Formulas = require(Shared.Logic.Formulas)
 local Format = require(Shared.Utilities.Format)
+local Parts = require(script.Parent.Parts)
 local RagdollFactory = require(script.Parent.RagdollFactory)
+local TrainingArea = require(script.Parent.TrainingArea)
 
 export type Layout = {
 	WorldId: string,
@@ -39,7 +42,6 @@ local HUB_WIDTH = 260
 local RUNWAY_HALF_WIDTH = 40
 local FLOOR_THICKNESS = 20
 local GROUND_WIDTH = 900
-local MAX_PART_LENGTH = 2000
 local DUMMY_OFFSET = 6
 
 local WHITE = Color3.new(1, 1, 1)
@@ -49,111 +51,14 @@ local rgb = Color3.fromRGB
 
 local WorldBuilder = {}
 
--- Part helpers
+-- Part helpers (shared with TrainingArea)
 
-local function newPart(parent: Instance, props: { [string]: any }): Part
-	local part = Instance.new("Part")
-	part.Anchored = true
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	if props.Shape then
-		part.Shape = props.Shape
-	end
-	for key, value in props do
-		if key ~= "Shape" then
-			(part :: any)[key] = value
-		end
-	end
-	part.Parent = parent
-	return part
-end
-
--- Decoration: no collisions, no raycasts, no touches, no shadows. Keeps physics cheap.
-local function decor(parent: Instance, props: { [string]: any }): Part
-	local part = newPart(parent, props)
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.CastShadow = false
-	return part
-end
-
--- An upright cylinder (Roblox cylinders lie along X, so it's rotated onto Y).
-local function cylinder(parent: Instance, position: Vector3, height: number, diameter: number, props: { [string]: any }): Part
-	props.Shape = Enum.PartType.Cylinder
-	props.Size = Vector3.new(height, diameter, diameter)
-	props.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
-	return decor(parent, props)
-end
-
--- A long box along X, split into pieces below Roblox's part size limit.
-local function longBox(parent: Instance, name: string, center: Vector3, length: number, height: number, width: number, props: { [string]: any })
-	local pieces = math.max(1, math.ceil(length / MAX_PART_LENGTH))
-	local pieceLength = length / pieces
-	local startX = center.X - length / 2
-	for i = 0, pieces - 1 do
-		local piece = table.clone(props)
-		piece.Name = name
-		piece.Size = Vector3.new(pieceLength, height, width)
-		piece.Position = Vector3.new(startX + (i + 0.5) * pieceLength, center.Y, center.Z)
-		newPart(parent, piece)
-	end
-end
-
-local function sign(parent: Instance, position: Vector3, text: string, textColor: Color3, width: number, height: number, background: Color3?): TextLabel
-	local anchor = decor(parent, {
-		Name = "Sign",
-		Size = Vector3.one,
-		Transparency = 1,
-		Position = position,
-	})
-
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromScale(width, height)
-	gui.LightInfluence = 0
-	gui.MaxDistance = 700
-	gui.Parent = anchor
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundColor3 = background or Color3.new(0, 0, 0)
-	label.BackgroundTransparency = if background then 0.2 else 1
-	label.Text = text
-	label.TextScaled = true
-	label.Font = Enum.Font.FredokaOne
-	label.TextColor3 = textColor
-	label.TextStrokeTransparency = 0
-	label.TextStrokeColor3 = Color3.new(0, 0, 0)
-	label.Parent = gui
-
-	if background then
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0.2, 0)
-		corner.Parent = label
-		local padding = Instance.new("UIPadding")
-		padding.PaddingLeft = UDim.new(0.04, 0)
-		padding.PaddingRight = UDim.new(0.04, 0)
-		padding.PaddingTop = UDim.new(0.08, 0)
-		padding.PaddingBottom = UDim.new(0.08, 0)
-		padding.Parent = label
-	end
-	return label
-end
-
-local function prompt(parent: BasePart, actionText: string, objectText: string, attributes: { [string]: any }): ProximityPrompt
-	local p = Instance.new("ProximityPrompt")
-	p.ActionText = actionText
-	p.ObjectText = objectText
-	p.HoldDuration = 0
-	p.MaxActivationDistance = 12
-	p.RequiresLineOfSight = false
-	p.KeyboardKeyCode = Enum.KeyCode.E
-	for key, value in attributes do
-		p:SetAttribute(key, value)
-	end
-	p.Parent = parent
-	return p
-end
+local newPart = Parts.Part
+local decor = Parts.Decor
+local cylinder = Parts.Cylinder
+local longBox = Parts.LongBox
+local sign = Parts.Sign
+local prompt = Parts.Prompt
 
 -- Stations
 
@@ -238,44 +143,6 @@ local function buildUpgradeShop(parent, origin, theme)
 	decor(model, { Name = "Kiosk", Size = Vector3.new(6, 8, 6), Position = c + Vector3.new(0, 5, -3), Color = rgb(40, 140, 200) })
 	decor(model, { Name = "Screen", Size = Vector3.new(4.5, 3, 0.3), Position = c + Vector3.new(0, 6, -0.05), Color = rgb(80, 230, 255), Material = Enum.Material.Neon })
 	prompt(base, "Open", "Upgrade Shop", { Panel = "Upgrades" })
-end
-
-local function buildTrainingArea(parent, origin, theme)
-	local model = Instance.new("Model")
-	model.Name = "TrainingArea"
-	model.Parent = parent
-
-	local count = #BagsConfig.List
-	local spacing = 15
-	local firstX = -250
-	local z = 72
-	local lastX = firstX + (count - 1) * spacing
-	local midX = (firstX + lastX) / 2
-
-	decor(model, { Name = "Mat", Size = Vector3.new(count * spacing + 6, 0.3, 22), Position = origin + Vector3.new(midX, 0.15, z), Color = rgb(60, 60, 70) })
-	decor(model, { Name = "Beam", Size = Vector3.new(count * spacing + 2, 1.5, 1.5), Position = origin + Vector3.new(midX, 14, z), Color = rgb(90, 90, 100), Material = Enum.Material.Metal })
-	for _, x in { firstX - 6, lastX + 6 } do
-		decor(model, { Name = "Post", Size = Vector3.new(1.5, 14, 1.5), Position = origin + Vector3.new(x, 7, z), Color = rgb(90, 90, 100), Material = Enum.Material.Metal })
-	end
-	sign(model, origin + Vector3.new(midX, 23, z), "🏋️ Training Area", WHITE, 26, 5, theme.Accent:Lerp(Color3.new(0, 0, 0), 0.35))
-
-	for i, bag in BagsConfig.List do
-		local x = firstX + (i - 1) * spacing
-		local position = origin + Vector3.new(x, 0, z)
-		decor(model, { Name = "Rope", Size = Vector3.new(0.3, 3, 0.3), Position = position + Vector3.new(0, 11.75, 0), Color = rgb(40, 40, 40) })
-		local bagPart = newPart(model, {
-			Name = bag.Id .. "Bag",
-			Shape = Enum.PartType.Cylinder,
-			Size = Vector3.new(7, 4, 4),
-			CFrame = CFrame.new(position + Vector3.new(0, 6.75, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-			Color = bag.Color,
-			CanCollide = false,
-			CanTouch = false,
-		})
-		local requirement = if bag.RequiredRebirths > 0 then `{bag.RequiredRebirths} Rebirths` else "Free"
-		sign(model, position + Vector3.new(0, 18, 0), `{bag.Name}\n{Format.Multiplier(bag.Multiplier)} • {requirement}`, WHITE, 12, 3.5)
-		prompt(bagPart, "Use Bag", bag.Name, { Bag = bag.Id })
-	end
 end
 
 -- Decorations
@@ -406,6 +273,11 @@ local function decorate(parent: Instance, origin: Vector3, theme, runwayLength: 
 		for _, side in { -1, 1 } do
 			-- Keep props clear of the hub and the runway.
 			local minZ = if x < 10 then HUB_WIDTH / 2 + 20 else RUNWAY_HALF_WIDTH + 30
+			-- The Training Grounds plaza extends the hub on the +Z side; keep props off it.
+			local layout = TrainingAreaConfig.Layout
+			if side == 1 and x > layout.PlazaMinX - 30 and x < layout.PlazaMaxX + 30 then
+				minZ = layout.PlazaMaxZ + 25
+			end
 			local z = side * rng:NextNumber(minZ, minZ + 220)
 			placeProp(folder, theme.Decor, origin + Vector3.new(x + rng:NextNumber(-15, 15), groundY, z), rng)
 		end
@@ -520,9 +392,12 @@ function WorldBuilder.Build(world, origin: Vector3, parent: Instance): Layout
 
 	-- Paths: main path from spawn to the launch pad, plus branches to each station row.
 	decor(model, { Name = "Path", Size = Vector3.new(262, 0.2, 14), Position = origin + Vector3.new(-134, 0.1, 0), Color = theme.Path })
+	-- (The Training Grounds build their own paths on the +Z side at x = -262 and -212.)
 	for _, x in { -250, -190, -130, -70 } do
 		for _, side in { -1, 1 } do
-			decor(model, { Name = "Path", Size = Vector3.new(10, 0.2, 56), Position = origin + Vector3.new(x, 0.1, side * 35), Color = theme.Path })
+			if side == -1 or x > -150 then
+				decor(model, { Name = "Path", Size = Vector3.new(10, 0.2, 56), Position = origin + Vector3.new(x, 0.1, side * 35), Color = theme.Path })
+			end
 		end
 	end
 
@@ -548,7 +423,7 @@ function WorldBuilder.Build(world, origin: Vector3, parent: Instance): Layout
 	buildRebirthStation(stations, origin, theme)
 	buildUpgrader(stations, origin, theme)
 	buildUpgradeShop(stations, origin, theme)
-	buildTrainingArea(stations, origin, theme)
+	TrainingArea.Build(stations, origin, world)
 
 	-- Launch station: a pad to stand on and a display dummy to punch.
 	local launch = Instance.new("Model")

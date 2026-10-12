@@ -45,18 +45,40 @@ local function applyLighting(worldId: string)
 	}):Play()
 end
 
+-- Gentle, game-wide polish: slightly richer colour, soft shadows, a light glow on neon accents.
+-- Only creates effects that don't exist yet, so anything set up in Studio is left alone.
+local function applyPolish()
+	pcall(function()
+		Lighting.ShadowSoftness = 0.25
+		Lighting.EnvironmentDiffuseScale = 0.6
+		Lighting.EnvironmentSpecularScale = 0.6
+	end)
+	if not Lighting:FindFirstChildOfClass("ColorCorrectionEffect") then
+		local correction = Instance.new("ColorCorrectionEffect")
+		correction.Saturation = 0.12
+		correction.Contrast = 0.05
+		correction.Brightness = 0.01
+		correction.Parent = Lighting
+	end
+	if not Lighting:FindFirstChildOfClass("BloomEffect") then
+		local bloom = Instance.new("BloomEffect")
+		bloom.Intensity = 0.35
+		bloom.Size = 20
+		bloom.Threshold = 1.6
+		bloom.Parent = Lighting
+	end
+end
+
 function WorldController.Init() end
 
 function WorldController.Start()
+	applyPolish()
+
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		-- Bag prompts are handled by TrainingAreaController.
 		local panel = prompt:GetAttribute("Panel")
 		if type(panel) == "string" then
 			UIController.Open(panel)
-			return
-		end
-		local bag = prompt:GetAttribute("Bag")
-		if type(bag) == "string" then
-			UIController.Request("SelectBag", bag)
 		end
 	end)
 

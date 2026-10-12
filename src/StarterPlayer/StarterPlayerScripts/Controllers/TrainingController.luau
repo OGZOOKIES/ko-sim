@@ -34,6 +34,9 @@ local function trainOnce()
 	Net.Fire("Train")
 end
 
+-- One training punch (rate-limited here and on the server). Used by the bag prompts too.
+TrainingController.TrainOnce = trainOnce
+
 local function popText(text: string)
 	local hud = UIController.GetHud()
 	local label = Components.Label({

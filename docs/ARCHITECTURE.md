@@ -51,6 +51,26 @@ Panels only rebuild when their `Key(data)` changes, so they don't flicker while 
 4. Every frame the server measures the ragdoll's position along the runway. The launch ends when the ragdoll settles, leaves the runway (the last on-runway distance counts), or reaches `MaxFlightTime`. A session can only end once, so Wins are awarded once.
 5. Ragdolls are in a collision group that ignores characters and other ragdolls, so players can't interfere with each other.
 
+## Training Grounds
+
+Built by `ServerScriptService/World/TrainingArea/` for every world. `WorldBuilder` calls it, and rebuilding replaces the old model instead of duplicating it:
+
+| File | Builds |
+|---|---|
+| `Pavilion.luau` | Two-tier stone platform, 8 pillars, gabled roof, TRAINING GROUNDS sign, lanterns, banners, bag beam |
+| `Bags.luau` | The six bags (models tagged `TrainingBag`, pivot at the hanging ring), mats, chains, labels, Cosmic orbiters |
+| `Plaza.luau` | Floor extension, curved walkway and arch, side paths, planters, flower beds, benches, trees, rocks, hills |
+| `ProgressBoard.luau` | The Basic → Cosmic board |
+
+How the area looks is set in `Shared/Config/TrainingAreaConfig.luau` (colours, per-bag look, layout). Which bags you can use is still decided by `BagsConfig` and checked on the server in `Economy.SelectBag`.
+
+On the client, `TrainingAreaController` does the following, for that player only:
+- Fills in the lock and in-use status on the labels, prompts and board.
+- Highlights the bag you walk up to and the bag you're training with.
+- Handles the bag prompts: a bag you haven't selected sends `SelectBag`, and the selected bag trains.
+- Swings your bag and shows a small impact when your Power rises while you're standing next to it.
+- Turns the roof emblem and the Cosmic orbiters, only when the camera is nearby.
+
 ## Balancing
 
 All numbers are in `src/ReplicatedStorage/Shared/Config`:

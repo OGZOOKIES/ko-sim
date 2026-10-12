@@ -11,6 +11,7 @@ local ORDER = {
 	"LaunchController",
 	"PetController",
 	"WorldController",
+	"TrainingAreaController",
 }
 
 Net.On("StateUpdated", ClientState.Set)

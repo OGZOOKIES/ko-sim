@@ -7,6 +7,7 @@ local BagsConfig = require(Config.BagsConfig)
 local EggsConfig = require(Config.EggsConfig)
 local GlovesConfig = require(Config.GlovesConfig)
 local PetsConfig = require(Config.PetsConfig)
+local TrainingAreaConfig = require(Config.TrainingAreaConfig)
 local UpgradesConfig = require(Config.UpgradesConfig)
 local WorldsConfig = require(Config.WorldsConfig)
 
@@ -138,6 +139,19 @@ return function(t)
 			for r = 1, 8 do
 				t.truthy(current[r].Multiplier > previous[r].Multiplier, `{current[r].Name} beats {previous[r].Name}`)
 			end
+		end
+	end)
+
+	t.test("every bag has Training Grounds visuals", function()
+		for _, bag in BagsConfig.List do
+			local visual = TrainingAreaConfig.Bags[bag.Id]
+			t.truthy(visual, `{bag.Id} has visuals`)
+			t.truthy(visual.Length > 0 and visual.Diameter > 0, `{bag.Id} has a size`)
+			-- The bag, ring and label must fit between the floor and the beam.
+			local layout = TrainingAreaConfig.Layout
+			local top = layout.FloorHeight + layout.BagBottom + 0.9 + visual.Length + 1.6
+			t.truthy(top + 5 < layout.BeamBottom, `{bag.Id} and its label fit under the beam`)
+			t.truthy(visual.Diameter + 5.6 < layout.BagSpacing - 4, `{bag.Id} leaves a walkway to its neighbours`)
 		end
 	end)
 

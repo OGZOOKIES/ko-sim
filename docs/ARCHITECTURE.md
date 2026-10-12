@@ -1,0 +1,83 @@
+# Architecture and balancing
+
+## Server
+
+```
+Bootstrap.server.luau
+  Net.Init()                      creates ReplicatedStorage.Remotes from Shared/Remotes
+  Services: Init() in order, then Start() (PlayerDataService starts last)
+
+PlayerDataService   load/save, session lock, autosave, pushes data to the client
+WorldService        builds all five worlds, unlock + travel
+ZoneRewardService   distance -> zone -> Wins (called by LaunchService)
+TrainingService     Train event, bag selection, Auto Train loop
+ShopService         gloves + glove visuals on the character
+PetService          eggs, equip/unequip/delete, EquippedPets attribute
+PetUpgradeService   5 identical pets -> next tier
+RebirthService      rebirths
+UpgradeService      token upgrades
+LaunchService       charge -> launch -> flight tracking -> reward
+```
+
+Dependencies only point downward: services use `PlayerDataService`, `Net` and `Logic/Economy`, and `LaunchService` also uses `WorldService` and `ZoneRewardService`. Nothing depends on `LaunchService`.
+
+Every change to a player's progress goes through `Logic/Economy.luau`. Its functions never yield, so a change can't be interrupted halfway. That is why fusing pets can never lose pets without granting the result, and why repeated requests can't duplicate currency. `Net` also allows only one request per player at a time and rate-limits each remote.
+
+## Client
+
+```
+Client.client.luau      listens for StateUpdated, starts controllers, fetches initial state
+ClientState             latest data copy + Changed signal
+Controllers/
+  UIController          ScreenGui, HUD, panels, toasts, confirm dialogs, Request()
+  TrainingController    train button (tap/hold), auto toggle, +Power pop-ups
+  LaunchController      charge meter, release, follow camera, live readout, results
+  PetController         local pet followers for every player
+  WorldController       station prompts -> panels, per-world lighting
+UI/
+  Theme, Components     shared look and building blocks
+  Hud                   always-visible HUD
+  HatchAnimation        egg hatch overlay
+  Panels/*Panel.luau    one file per panel: Create(ui) -> { Name, Panel, Refresh, Key? }
+```
+
+Panels only rebuild when their `Key(data)` changes, so they don't flicker while Power ticks up.
+
+## The launch
+
+1. The player triggers the dummy prompt (or **Retry**). The server checks that their data is loaded, they're in that world, within `StationRange`, not mid-launch and off cooldown.
+2. The client shows a meter that goes up and down (`Formulas.ChargeAt`). On release it sends the value it showed. The server accepts that value only if its own meter passed through it within the player's ping window; otherwise it uses its own value. A punch that is never released is released automatically after `MaxChargeTime`.
+3. The server works out the distance from the player's stats (`Formulas.LaunchDistance`). It spawns a ragdoll that it simulates itself, aimed so its flight covers `FlightRangeFactor` of that distance. Tumbling covers the rest, which adds a little randomness.
+4. Every frame the server measures the ragdoll's position along the runway. The launch ends when the ragdoll settles, leaves the runway (the last on-runway distance counts), or reaches `MaxFlightTime`. A session can only end once, so Wins are awarded once.
+5. Ragdolls are in a collision group that ignores characters and other ragdolls, so players can't interfere with each other.
+
+## Balancing
+
+All numbers are in `src/ReplicatedStorage/Shared/Config`:
+
+| Want to change... | Edit |
+|---|---|
+| Zone names, distances, Wins | `WorldsConfig` → `Zones` |
+| How much Power reaches the last zone | `WorldsConfig` → `FullStrength` per world |
+| How steep the distance curve is | `WorldsConfig.DistanceExponent` |
+| Glove power/cost | `GlovesConfig` |
+| Pet odds / multipliers | `PetsConfig` (`Rarities`, `WorldScale`) |
+| Egg costs | `EggsConfig` |
+| Rebirth cost and multiplier | `RebirthConfig` |
+| Bags | `BagsConfig` |
+| Upgrades | `UpgradesConfig` |
+| Charge meter, launch feel, end conditions | `LaunchConfig` |
+| Training speed, autosave | `GameConfig` |
+
+The formulas are documented at the top of `Shared/Logic/Formulas.luau`.
+
+The **starting** numbers are first guesses: they have not been playtested. A good first balancing pass is to play Greenfield from scratch and time how long each glove, the first egg and the first rebirth take.
+
+## Saved data
+
+`ServerScriptService/Logic/DataTemplate.luau` defines the schema (version 1). On load: migrate (version upgrades), reconcile (fill in missing fields), sanitize (fix anything that no longer matches the config).
+
+- Data is read and written with `UpdateAsync` only.
+- A session lock stops two servers saving the same player. A server that finds a fresh lock waits and retries, and takes the lock over on the last attempt.
+- If loading fails on a live server, the player is kicked and nothing is ever saved for them, so default data can never overwrite real progress.
+- Autosave runs every 60 seconds, and everyone is saved on shutdown (`BindToClose`).

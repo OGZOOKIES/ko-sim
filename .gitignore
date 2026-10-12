@@ -1,0 +1,32 @@
+# Roblox place files: the place lives in Roblox Studio / the cloud, the code lives here.
+# Binary place files can't be merged, so committing them causes conflicts.
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Rojo build output and generated files
+build/
+sourcemap.json
+
+# Secrets: never commit API keys, Open Cloud keys or .ROBLOSECURITY cookies
+.env
+.env.*
+*.key
+*.pem
+
+# Packages (if Wally/Pesde are added later, they are reinstalled from the manifest)
+Packages/
+ServerPackages/
+DevPackages/
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
